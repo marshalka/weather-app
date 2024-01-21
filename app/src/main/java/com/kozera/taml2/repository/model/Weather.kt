@@ -1,5 +1,7 @@
 package com.kozera.taml2.repository.model
 
+import com.google.gson.annotations.SerializedName
+
 data class Weather(
     val id: Number,
     val name: String,
@@ -8,11 +10,9 @@ data class Weather(
 
 data class WeatherInfo(
     val temp: Double,
-    val feelsLike: Double,
-    val tempMin: Double,
-    val tempMax: Double,
+    @SerializedName("feels_like") val feelsLike: Double,
+    @SerializedName("temp_min") val tempMin: Double,
+    @SerializedName("temp_max") val tempMax: Double,
     val pressure: Int,
     val humidity: Int,
-    val seaLevel: Int,
-    val groundLevel: Int
 )

@@ -1,5 +1,7 @@
 package com.kozera.taml2
 
+import com.kozera.taml2.details.DetailsActivity
+import android.content.Intent
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.ComponentActivity
@@ -12,14 +14,17 @@ import androidx.compose.ui.Modifier
 import com.kozera.taml2.ui.theme.TAML2Theme
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
@@ -52,15 +57,23 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    Showcase(viewModel = viewModel)
+                    Showcase(viewModel = viewModel, { id: String ->
+                        navigateToDetailsActivity(id)
+                    })
                 }
             }
         }
     }
+
+    fun navigateToDetailsActivity(id: String) {
+        val intent = Intent(this, DetailsActivity::class.java)
+        intent.putExtra("CUSTOM_KEY", id)
+        startActivity(intent)
+    }
 }
 
 @Composable
-fun Showcase(viewModel: MainViewModel, modifier: Modifier = Modifier) {
+fun Showcase(viewModel: MainViewModel, onItemClick: (String) -> Unit, modifier: Modifier = Modifier) {
     val uiState by viewModel.immutableWeatherData.observeAsState(UiState(isLoading = true))
 
     when {
@@ -73,7 +86,7 @@ fun Showcase(viewModel: MainViewModel, modifier: Modifier = Modifier) {
         }
 
         uiState.data != null -> {
-            uiState.data?.let { ShowWeatherData(uiState.data, modifier) }
+            uiState.data?.let { ShowWeatherData(uiState.data, onItemClick, modifier) }
         }
     }
 }
@@ -108,14 +121,14 @@ fun ShowErrorMessage(error: String?) {
 }
 
 @Composable
-fun ShowWeatherData(weathers: List<Weather>?, modifier: Modifier) {
+fun ShowWeatherData(weathers: List<Weather>?, onItemClick: (String) -> Unit, modifier: Modifier) {
     if (weathers?.isNotEmpty() == true) {
         LazyColumn(
             modifier = modifier.fillMaxSize(),
             contentPadding = PaddingValues(16.dp)
         ) {
             items(weathers) { weather ->
-                WeatherCard(weather = weather)
+                WeatherCard(weather = weather, onItemClick = onItemClick)
                 Spacer(modifier = Modifier.height(16.dp))
             }
         }
@@ -132,7 +145,7 @@ fun ShowWeatherData(weathers: List<Weather>?, modifier: Modifier) {
 }
 
 @Composable
-fun WeatherCard(weather: Weather) {
+fun WeatherCard(weather: Weather, onItemClick: (String) -> Unit) {
     Log.d("WeatherCard", "City: ${weather.name}, Temperature: ${weather.main.temp}°C")
 
     val specificImageResource = getSpecificImageResource(weather)
@@ -142,26 +155,30 @@ fun WeatherCard(weather: Weather) {
             .fillMaxWidth()
             .background(Color.White)
     ) {
-        WeatherCardBackground(imageResource = specificImageResource)
-
-        WeatherCardContent(weather = weather)
+        WeatherCardBackground(imageResource = specificImageResource, modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(max = 200.dp)
+            .aspectRatio(1.5f) // adjust this ratio based on your design requirements
+        )
+        WeatherCardContent(weather = weather, onItemClick = onItemClick)
     }
 }
-
 @Composable
-fun WeatherCardBackground(imageResource: Int) {
+fun WeatherCardBackground(imageResource: Int, modifier: Modifier) {
     Image(
         painter = painterResource(id = imageResource),
         contentDescription = null,
-        modifier = Modifier.fillMaxSize(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .then(modifier),
         contentScale = ContentScale.Crop
     )
 }
 
 @Composable
-fun WeatherCardContent(weather: Weather) {
+fun WeatherCardContent(weather: Weather, onItemClick: (String) -> Unit) {
     Column(
-        modifier = Modifier
+        modifier = Modifier.clickable { onItemClick.invoke(weather.name) }
             .padding(16.dp)
             .fillMaxWidth()
             .fillMaxHeight()
@@ -169,7 +186,7 @@ fun WeatherCardContent(weather: Weather) {
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        WeatherText("City: ${weather.name}", fontWeight = FontWeight.Bold, fontSize = 24.sp)
+        WeatherText(weather.name, fontWeight = FontWeight.Bold, fontSize = 24.sp)
         Spacer(modifier = Modifier.height(8.dp))
         WeatherText("Temperature: ${weather.main.temp}°C", fontSize = 18.sp)
         WeatherText("Feels Like: ${weather.main.feelsLike}°C", fontSize = 18.sp)
